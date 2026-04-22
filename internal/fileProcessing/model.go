@@ -6,5 +6,5 @@ type ReplacementPattern struct {
 }
 
 type FileProcessing interface {
-	ProcessFile(filePath string, patterns []ReplacementPattern) (string, error)
+	ProcessFile(fileContent string, patterns []ReplacementPattern) (string, error)
 }
