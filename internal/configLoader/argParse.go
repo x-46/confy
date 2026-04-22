@@ -40,5 +40,9 @@ func argParse(args []string) (CommandLineArgs, error) {
 		}
 	}
 
+	if lastArg != "" {
+		allArgs = append(allArgs, CommandLineArg{Key: lastArg, Value: ""})
+	}
+
 	return CommandLineArgs{BaseModule: baseModule, Args: allArgs}, nil
 }

@@ -1,20 +1,24 @@
 package commands
 
-var commandList []*MoadlCommand = []*MoadlCommand{}
+import "fmt"
 
-func GetCommandByName(name string) *MoadlCommand {
+var commandList []CommandModule = []CommandModule{
+	&HelpCommand{},
+}
+
+func GetCommandByName(name string) (CommandModule, error) {
 	for _, cmd := range commandList {
-		if (*cmd).GetName() == name {
-			return cmd
+		if cmd.GetName() == name {
+			return cmd, nil
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("command not found: %s", name)
 }
 
 func GetValidCommands() []string {
 	var validCommands []string
 	for _, cmd := range commandList {
-		validCommands = append(validCommands, (*cmd).GetName())
+		validCommands = append(validCommands, cmd.GetName())
 	}
 	return validCommands
 }

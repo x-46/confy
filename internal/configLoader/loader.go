@@ -11,13 +11,13 @@ import (
 type Config struct {
 	SourceDir string `yaml:"sourceDir" cli:"sourceDir" cliDescription:"Directory to scan for files to process"`
 
-	ConfigFilePath string
-
 	DBPath string `yaml:"dbPath" cli:"dbPath" cliDescription:"Path to the database file"`
 
 	FileExtensions []string `yaml:"fileExtensions" cli:"fileExtensions" cliDescription:"List of file extensions to process"`
 
 	PrimaryCommandModule string `yaml:"primaryCommandModule" cli:"primaryCommandModule" cliDescription:"Primary command module to execute"`
+
+	HelpOnly bool `cli:"help" cliDescription:"If set, only the help command will be executed"`
 }
 
 func InitConfig() (*Config, error) {
@@ -87,6 +87,12 @@ func applyArg(config *Config, args CommandLineArg) error {
 			fieldValue := configValue.Field(i)
 			if fieldValue.Kind() == reflect.Slice {
 				fieldValue.Set(reflect.Append(fieldValue, reflect.ValueOf(args.Value)))
+			} else if fieldValue.Kind() == reflect.Bool {
+				if args.Value == "false" {
+					fieldValue.SetBool(false)
+				} else {
+					fieldValue.SetBool(true)
+				}
 			} else {
 				fieldValue.SetString(args.Value)
 			}
