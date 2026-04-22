@@ -3,20 +3,21 @@ package configloader
 import (
 	"fmt"
 	"os"
+	"reflect"
 
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	SourceDir string `yaml:"sourceDir"`
+	SourceDir string `yaml:"sourceDir" cli:"sourceDir" cliDescription:"Directory to scan for files to process"`
 
 	ConfigFilePath string
 
-	DBPath string `yaml:"dbPath"`
+	DBPath string `yaml:"dbPath" cli:"dbPath" cliDescription:"Path to the database file"`
 
-	FileExtensions []string `yaml:"fileExtensions"`
+	FileExtensions []string `yaml:"fileExtensions" cli:"fileExtensions" cliDescription:"List of file extensions to process"`
 
-	PrimaryCommandModule string `yaml:"primaryCommandModule"`
+	PrimaryCommandModule string `yaml:"primaryCommandModule" cli:"primaryCommandModule" cliDescription:"Primary command module to execute"`
 }
 
 func InitConfig() (*Config, error) {
@@ -50,6 +51,9 @@ func InitConfig() (*Config, error) {
 	}
 
 	for _, arg := range parsedArgs.Args {
+		if arg.Key == "configFilePath" {
+			continue
+		}
 		if err := applyArg(&config, arg); err != nil {
 			return nil, err
 		}
@@ -75,17 +79,20 @@ func loadConfigFromFile(filePath string) (*Config, error) {
 }
 
 func applyArg(config *Config, args CommandLineArg) error {
-	switch args.Key {
-	case "sourceDir":
-		config.SourceDir = args.Value
-	case "configFilePath":
-		config.ConfigFilePath = args.Value
-	case "dbPath":
-		config.DBPath = args.Value
-	case "fileExtensions":
-		config.FileExtensions = append(config.FileExtensions, args.Value)
-	default:
-		return fmt.Errorf("unknown argument: %s", args.Key)
+	configValue := reflect.ValueOf(config).Elem()
+	for i := 0; i < configValue.NumField(); i++ {
+		field := configValue.Type().Field(i)
+		cliTag := field.Tag.Get("cli")
+		if cliTag == args.Key {
+			fieldValue := configValue.Field(i)
+			if fieldValue.Kind() == reflect.Slice {
+				fieldValue.Set(reflect.Append(fieldValue, reflect.ValueOf(args.Value)))
+			} else {
+				fieldValue.SetString(args.Value)
+			}
+			return nil
+		}
 	}
-	return nil
+
+	return fmt.Errorf("unknown argument: %s", args.Key)
 }
