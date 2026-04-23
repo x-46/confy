@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"syscall"
 
+	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,6 +18,8 @@ type Config struct {
 	FileExtensions []string `yaml:"fileExtensions" cli:"fileExtensions" cliDescription:"List of file extensions to process"`
 
 	PrimaryCommandModule string `yaml:"primaryCommandModule" cli:"primaryCommandModule" cliDescription:"Primary command module to execute"`
+
+	Password string `cli:"password" cliDescription:"Password for encrypting/decrypting data"`
 
 	HelpOnly bool `cli:"help" cliDescription:"If set, only the help command will be executed"`
 }
@@ -60,6 +64,16 @@ func InitConfig() (*Config, error) {
 	}
 
 	config.PrimaryCommandModule = parsedArgs.BaseModule
+
+	if config.Password == "" && !(config.HelpOnly || config.PrimaryCommandModule == "help") {
+		fmt.Print("Enter Password: ")
+		bytePassword, err := term.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			return nil, fmt.Errorf("error reading password: %w", err)
+		}
+		config.Password = string(bytePassword)
+		fmt.Println()
+	}
 
 	return &config, nil
 }
