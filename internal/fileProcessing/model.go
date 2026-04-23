@@ -5,6 +5,12 @@ type ReplacementPattern struct {
 	Replacement string
 }
 
-type FileProcessing interface {
-	ProcessFile(fileContent string, patterns []ReplacementPattern) (string, error)
+func MultiReplaceAll(fileContent string, patterns []ReplacementPattern) (string, error) {
+	words := make([]string, len(patterns))
+	replacements := make([]string, len(patterns))
+	for i := range patterns {
+		words[i] = patterns[i].Pattern
+		replacements[i] = patterns[i].Replacement
+	}
+	return multiReplaceAll(fileContent, words, replacements)
 }
