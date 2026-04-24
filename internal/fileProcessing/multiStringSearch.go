@@ -108,7 +108,6 @@ func multiReplaceAll(text string, words []string, replacements []string) (string
 	slices.SortFunc(indexWithOccurence, func(a, b [2]int) int {
 		return cmp.Compare(a[1], b[1])
 	})
-	fmt.Println(indexWithOccurence)
 	for i := 0; i < len(indexWithOccurence)-1; i += 1 {
 		if indexWithOccurence[i][1]+len(words[indexWithOccurence[i][0]]) > indexWithOccurence[i+1][1] {
 			return "", fmt.Errorf("unambigious resolution between \"%s\" at %d and \"%s\" at %d", words[indexWithOccurence[i][0]], indexWithOccurence[i][1], words[indexWithOccurence[i+1][0]], indexWithOccurence[i+1][1])
