@@ -4,6 +4,8 @@ import "fmt"
 
 var commandList []CommandModule = []CommandModule{
 	&HelpCommand{},
+	&InitCommand{},
+	&AddCommand{},
 }
 
 func GetCommandByName(name string) (CommandModule, error) {

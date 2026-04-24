@@ -13,15 +13,23 @@ import (
 type Config struct {
 	SourceDir string `yaml:"sourceDir" cli:"sourceDir" cliDescription:"Directory to scan for files to process"`
 
+	ConfigFilePath string `cli:"configFilePath" cliDescription:"Path to the configuration file"`
+
 	DBPath string `yaml:"dbPath" cli:"dbPath" cliDescription:"Path to the database file"`
 
 	FileExtensions []string `yaml:"fileExtensions" cli:"fileExtensions" cliDescription:"List of file extensions to process"`
 
-	PrimaryCommandModule string `yaml:"primaryCommandModule" cli:"primaryCommandModule" cliDescription:"Primary command module to execute"`
+	PrimaryCommandModule string
 
 	Password string `cli:"password" cliDescription:"Password for encrypting/decrypting data"`
 
 	HelpOnly bool `cli:"help" cliDescription:"If set, only the help command will be executed"`
+
+	NewEntryName string `cli:"entryName" cliDescription:"Name of the new entry to add"`
+
+	NewEntryValue string `cli:"entryValue" cliDescription:"Value of the new entry to add"`
+
+	SetParameters []string
 }
 
 func InitConfig() (*Config, error) {
@@ -34,14 +42,25 @@ func InitConfig() (*Config, error) {
 	}
 
 	var configFilePath string
+	var configFilePathSet bool = false
 	for _, arg := range parsedArgs.Args {
 		if arg.Key == "configFilePath" {
 			configFilePath = arg.Value
+			configFilePathSet = true
 			break
 		}
 	}
 
 	var config Config
+
+	// if no config file path is provided, check if a default config file exists in the current directory
+	if !configFilePathSet {
+		if _, err := os.Stat("confy.yaml"); err == nil {
+			configFilePath = "confy.yaml"
+		}
+	}
+
+	// if a config file path is provided, attempt to load the config from the file
 	if configFilePath != "" {
 		loadedConfig, err := loadConfigFromFile(configFilePath)
 		if err != nil {
@@ -54,10 +73,9 @@ func InitConfig() (*Config, error) {
 		config = Config{}
 	}
 
+	// applys all command line arguments to the config struct, overriding any values from the config file
 	for _, arg := range parsedArgs.Args {
-		if arg.Key == "configFilePath" {
-			continue
-		}
+		config.SetParameters = append(config.SetParameters, arg.Key)
 		if err := applyArg(&config, arg); err != nil {
 			return nil, err
 		}
@@ -90,6 +108,36 @@ func loadConfigFromFile(filePath string) (*Config, error) {
 	}
 
 	return &c, nil
+}
+
+func SaveConfigToFile(config *Config) error {
+	if config.ConfigFilePath == "" {
+		return fmt.Errorf("config file path is not set")
+	}
+
+	// Create a map to store only fields with yaml tags
+	configMap := make(map[string]interface{})
+	configValue := reflect.ValueOf(config).Elem()
+
+	for i := 0; i < configValue.NumField(); i++ {
+		field := configValue.Type().Field(i)
+		yamlTag := field.Tag.Get("yaml")
+		if yamlTag != "" && yamlTag != "-" {
+			configMap[yamlTag] = configValue.Field(i).Interface()
+		}
+	}
+
+	yamlData, err := yaml.Marshal(configMap)
+	if err != nil {
+		return fmt.Errorf("error marshalling config to yaml: %w", err)
+	}
+
+	err = os.WriteFile(config.ConfigFilePath, yamlData, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing config to file: %w", err)
+	}
+
+	return nil
 }
 
 func applyArg(config *Config, args CommandLineArg) error {

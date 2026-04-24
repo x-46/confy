@@ -95,19 +95,19 @@ func OpenKeepassVault(filePath string, password string) (Vault, error) {
 func (v *KeepassVault) GetEntry(key string) (string, error) {
 	for _, entry := range v.group.Entries {
 		var title string
-		var password string
+		var value string
 
 		for _, val := range entry.Values {
 			switch val.Key {
 			case "Title":
 				title = val.Value.Content
 			case "Password":
-				password = val.Value.Content
+				value = val.Value.Content
 			}
 		}
 
 		if title == key {
-			return password, nil
+			return value, nil
 		}
 	}
 

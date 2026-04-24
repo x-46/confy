@@ -7,11 +7,31 @@ import (
 )
 
 func main() {
-	fmt.Println("Startring confy...")
+	/*err := vault.NewKeepassVault("vault2.kdbx", "password")
+	if err != nil {
+		fmt.Println("Error creating KeePass vault:", err)
+		return
+	}
 
+	res, err := vault.OpenKeepassVault("vault2.kdbx", "password")
+	if err != nil {
+		fmt.Println("Error opening KeePass vault:", err)
+		return
+	}
+	fmt.Println("KeePass vault opened successfully:", res)
+
+	res.SetEntry("test", "asd")
+
+	err = res.Close()
+	if err != nil {
+		fmt.Println("Error closing KeePass vault:", err)
+		return
+	}
+	*/
 	config, err := configloader.InitConfig()
 	if err != nil {
-		fmt.Println("Error initializing config:", err)
+		fmt.Println("Error initializing config", err)
+		fmt.Println("Run confy help for a list of available options.")
 		return
 	}
 
@@ -19,7 +39,8 @@ func main() {
 
 	commandModule, err := commands.GetCommandByName(config.PrimaryCommandModule)
 	if err != nil {
-		fmt.Println("Error getting command module:", config.PrimaryCommandModule)
+		fmt.Println("Command not found:", config.PrimaryCommandModule)
+		fmt.Println("Run confy help for a list of available commands.")
 		return
 	}
 
