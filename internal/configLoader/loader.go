@@ -32,6 +32,10 @@ type Config struct {
 	SetParameters []string
 }
 
+func (c *Config) CreateReplacementKeyFromKey(key string) string {
+	return fmt.Sprintf("confy_secret_%s", key)
+}
+
 func InitConfig() (*Config, error) {
 	args := os.Args[1:]
 

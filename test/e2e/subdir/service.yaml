@@ -1,0 +1,5 @@
+service: payment-gateway
+credentials:
+  api_key: confy_secret_api_key
+  db_password: confy_secret_db_password
+timeout: 30

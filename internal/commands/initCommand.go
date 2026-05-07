@@ -19,7 +19,7 @@ func (c *InitCommand) ValidateConfig(config *configloader.Config) error {
 	}
 
 	if !slices.Contains(config.SetParameters, "fileExtensions") {
-		config.FileExtensions = []string{".md", ".yml", ".yaml", ".json"}
+		config.FileExtensions = []string{".md", ".yml", ".yaml", ".json", ".env"}
 	}
 
 	if !slices.Contains(config.SetParameters, "dbPath") {

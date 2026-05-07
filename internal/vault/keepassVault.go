@@ -13,6 +13,7 @@ type Vault interface {
 	GetEntry(key string) (string, error)
 	SetEntry(key string, value string) error
 	SetDescription(key string, description string) error
+	GetKeys() ([]string, error)
 	Close() error
 }
 
@@ -197,6 +198,19 @@ func (v *KeepassVault) Close() error {
 	}
 
 	return nil
+}
+
+func (v *KeepassVault) GetKeys() ([]string, error) {
+	var keys []string
+	for _, entry := range v.group.Entries {
+		for _, val := range entry.Values {
+			if val.Key == "Title" {
+				keys = append(keys, val.Value.Content)
+				break
+			}
+		}
+	}
+	return keys, nil
 }
 
 func mkValue(key string, value string) gokeepasslib.ValueData {

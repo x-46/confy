@@ -35,8 +35,6 @@ func main() {
 		return
 	}
 
-	fmt.Println("Config initialized:", config)
-
 	commandModule, err := commands.GetCommandByName(config.PrimaryCommandModule)
 	if err != nil {
 		fmt.Println("Command not found:", config.PrimaryCommandModule)
@@ -45,7 +43,7 @@ func main() {
 	}
 
 	if config.HelpOnly {
-		commandModule.PrintHelp()
+		commandModule.PrintLongHelp()
 		return
 	}
 

@@ -1,0 +1,13 @@
+database:
+  host: confy_secret_db_host
+  port: 5432
+  password: confy_secret_db_password
+  name: myapp
+
+api:
+  key: confy_secret_api_key
+  base_url: https://api.example.com
+
+auth:
+  jwt_secret: confy_secret_jwt_secret
+  token_expiry: 3600
