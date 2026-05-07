@@ -91,6 +91,17 @@ func (c *AddCommand) Execute(config *configloader.Config) error {
 	return nil
 }
 
-func (c *AddCommand) PrintHelp() {
-	fmt.Println("  add: Adds a new entry. You can specify the entry name and value through command-line flags or by following the prompts.")
+func (c *AddCommand) PrintShortHelp() {
+	fmt.Println("  add       Add a new secret entry to the vault")
+}
+
+func (c *AddCommand) PrintLongHelp() {
+	fmt.Println("Command: add")
+	fmt.Println("Description: Add a new secret entry to the vault.")
+	fmt.Println("Options:")
+	printConfigOptions("dbPath", "password", "entryName", "entryValue")
+	fmt.Println("  Note: --entryName defaults to a random name, --entryValue triggers an interactive prompt if omitted")
+	fmt.Println("Examples:")
+	fmt.Println("  confy add --entryName api_key --entryValue supersecret")
+	fmt.Println("  confy add --dbPath confy.kdbx")
 }

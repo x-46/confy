@@ -18,7 +18,9 @@ type CommandLineArg struct {
 
 func argParse(args []string) (CommandLineArgs, error) {
 	if len(args) == 0 {
-		return CommandLineArgs{}, fmt.Errorf("no command provided")
+		return CommandLineArgs{
+			BaseModule: "help",
+		}, nil
 	}
 
 	baseModule := args[0]

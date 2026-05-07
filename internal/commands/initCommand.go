@@ -57,7 +57,16 @@ func (c *InitCommand) Execute(config *configloader.Config) error {
 	return nil
 }
 
-func (c *InitCommand) PrintHelp() {
-	fmt.Println("  init: Initializes a new Keepass Database.")
-	fmt.Println("        If an configuration path is provided but no configuration file exists, it will be created with the provided values.")
+func (c *InitCommand) PrintShortHelp() {
+	fmt.Println("  init      Initialize a new KeePass database and optional config file")
+}
+
+func (c *InitCommand) PrintLongHelp() {
+	fmt.Println("Command: init")
+	fmt.Println("Description: Initialize a new KeePass database and optionally create a config file.")
+	fmt.Println("Options:")
+	printConfigOptions("dbPath", "password", "configFilePath", "sourceDir", "fileExtensions")
+	fmt.Println("Examples:")
+	fmt.Println("  confy init --dbPath confy.kdbx")
+	fmt.Println("  confy init --dbPath vault.kdbx --configFilePath confy.yaml --sourceDir .")
 }

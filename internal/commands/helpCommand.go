@@ -17,39 +17,46 @@ func (c *HelpCommand) ValidateConfig(config *configloader.Config) error {
 }
 
 func (c *HelpCommand) Execute(config *configloader.Config) error {
-	c.PrintHelp()
+	c.PrintLongHelp()
 	return nil
 }
 
-func (c *HelpCommand) PrintHelp() {
-	fmt.Println("Usage: confy <command> [--arg value] [--flag]")
+func (c *HelpCommand) PrintShortHelp() {
+	fmt.Println("  help      Show help overview or detailed command help")
+}
 
+// printConfigOptions prints options from Config filtered by the given cli tag names.
+// Pass no names to print all options.
+func printConfigOptions(names ...string) {
+	filter := make(map[string]bool, len(names))
+	for _, n := range names {
+		filter[n] = true
+	}
 	config := &configloader.Config{}
-
-	fmt.Println("\nArguments:")
 	for field := range reflect.ValueOf(config).Elem().Type().Fields() {
 		cliTag := field.Tag.Get("cli")
 		cliDescription := field.Tag.Get("cliDescription")
-		yamlTag := field.Tag.Get("yaml")
-
-		if cliTag != "" && yamlTag != "" {
-			fmt.Printf("  --%s: %s [%s]\n", cliTag, cliDescription, yamlTag)
-		} else if cliTag != "" {
+		if cliTag == "" {
+			continue
+		}
+		if len(filter) == 0 || filter[cliTag] {
 			fmt.Printf("  --%s: %s\n", cliTag, cliDescription)
-		} else if yamlTag != "" {
-
-			fmt.Printf("  %s: %s\n", yamlTag, cliDescription)
 		}
 	}
-	fmt.Println("  --configFilePath: Path to a YAML config file")
+}
 
+func (c *HelpCommand) PrintLongHelp() {
+	fmt.Println("Command: confy")
+	fmt.Println("Description: Manage secrets in files using a KeePass vault.")
+	fmt.Println("Usage: confy <command> [options]")
+	fmt.Println("\nGlobal options:")
+	printConfigOptions()
 	fmt.Println("\nCommands:")
 	for _, cmd := range commandList {
 		if cmd.GetName() == "help" {
 			continue
 		}
-		cmd.PrintHelp()
+		cmd.PrintShortHelp()
 	}
-
-	fmt.Println("\nUse 'confy <command> --help' for more information on a specific command.")
+	fmt.Println("\nUse 'confy <command> --help' for detailed usage and examples.")
 }
