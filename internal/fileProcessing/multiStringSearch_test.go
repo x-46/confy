@@ -1,6 +1,10 @@
 package fileprocessing
 
 import (
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 )
@@ -115,9 +119,9 @@ var indexTests = []IndexTest{
 
 func TestKmpSearch(t *testing.T) {
 	for _, test := range indexTests {
-		actual := KmpSearch(test.haystack, []string{test.needle})
-		if len(actual[0]) == 0 {
-			actual[0] = append(actual[0], -1)
+		actual := wrappedKmpSearch(test.haystack, []string{test.needle})
+		if actual == nil {
+			actual = [][]int{{-1}}
 		}
 		if !slices.Equal(actual[0], test.out) {
 			t.Errorf("KmpSearch(%q,%q) = %v; want %v", test.haystack, test.needle, actual, test.out)
@@ -159,6 +163,64 @@ func TestMultiReplaceAll(t *testing.T) {
 		errorResult := err != nil
 		if test.result.s != actual || errorResult != test.result.err {
 			t.Errorf("multiReplaceAll(%q,%q) = %v; want %v", test.haystack, test.needles, ReplacementReturn{actual, errorResult}, test.result)
+		}
+	}
+}
+
+type pathtype int
+
+const (
+	pathtypeUrl = iota
+	pathtypFilepath
+)
+
+type urlOrFilepath struct {
+	s string
+	t pathtype
+}
+
+type multiReplaceAllBenchmark struct {
+	path         urlOrFilepath
+	needles      []string
+	replacements []string
+}
+
+var multiReplaceAllBenchmarkAllTests = []multiReplaceAllBenchmark{
+	{urlOrFilepath{"https://raw.githubusercontent.com/wess/iotr/master/lotr.txt", pathtypeUrl}, []string{"Hobbit", "hobbit", "Gandalf", "Thorin", "sk-1234ijkl5678mnop1234ijkl5678mnop1234ijkl", "people", "abcdefabcdefabcdefabcdefabcdefabcdef12"}, []string{"tibboH", "tibboh", "Magic man", "ǂɶȭɶ", "a", "dudes", "AAAAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaAAAAAAAAAAAAAAAAAAA"}},
+}
+
+func BenchmarkMultiReplaceAll(b *testing.B) {
+	texts := make([]string, len(multiReplaceAllBenchmarkAllTests))
+	for i, test := range multiReplaceAllBenchmarkAllTests {
+		switch test.path.t {
+		case pathtypeUrl:
+			resp, err := http.Get(test.path.s)
+			if err != nil {
+				b.Skip(err)
+			}
+			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				b.Skip(err)
+			}
+			texts[i] = string(body)
+		case pathtypFilepath:
+			cwd, err := os.Getwd()
+			if err != nil {
+				b.Skip(err)
+			}
+			path := filepath.Join(cwd, "../../test/fileProcessing/", test.path.s)
+			data, err := os.ReadFile(path)
+			if err != nil {
+				b.Skip(err)
+			}
+			texts[i] = string(data)
+		}
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		for i, test := range multiReplaceAllBenchmarkAllTests {
+			multiReplaceAll(texts[i], test.needles, test.replacements)
 		}
 	}
 }

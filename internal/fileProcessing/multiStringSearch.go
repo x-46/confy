@@ -1,126 +1,157 @@
 package fileprocessing
 
 import (
-	"cmp"
-	"fmt"
-	"slices"
 	"strings"
 )
 
-func computeTable(words []string) []map[int]int {
-	T := make([]map[int]int, len(words))
-	for i := range T {
-		T[i] = make(map[int]int)
+func computeTable(words []string) ([]int, []int) {
+	offsets := make([]int, len(words))
+	for i := 1; i < len(words); i++ {
+		offsets[i] = offsets[i-1] + len(words[i-1]) + 1
 	}
+	T := make([]int, offsets[len(words)-1]+len(words[len(words)-1])+1)
 	for i := range words {
+		if len(words[i]) == 0 {
+			continue
+		}
 		pos := 1
 		cnd := 0
-		T[i][0] = -1
+		T[offsets[i]] = -1
 		for pos < len(words[i]) {
 			if words[i][pos] == words[i][cnd] {
-				T[i][pos] = T[i][cnd]
+				T[offsets[i]+pos] = T[offsets[i]+cnd]
 			} else {
-				T[i][pos] = cnd
+				T[offsets[i]+pos] = cnd
 				for cnd >= 0 && words[i][pos] != words[i][cnd] {
-					cnd = T[i][cnd]
+					cnd = T[offsets[i]+cnd]
 				}
 			}
 			pos += 1
 			cnd += 1
 		}
-		T[i][pos] = cnd
+		T[offsets[i]+pos] = cnd
 	}
-	return T
+	return T, offsets
 }
 
-func KmpSearch(text string, words []string) [][]int {
+type occurrenceIndex struct {
+	index, occurrence int
+}
+
+func wrappedKmpSearch(text string, words []string) [][]int {
+	if len(text) == 0 || len(words) == 0 {
+		return nil
+	}
+	if len(words) == 1 && len(words[0]) == 0 {
+		return nil
+	}
+	allEmpty := true
+	for i := range words {
+		if len(words[i]) != 0 {
+			allEmpty = false
+			break
+		}
+	}
+	if allEmpty {
+		return nil
+	}
+	occurrences := kmpSearch(text, words)
+	if len(occurrences) == 0 {
+		return nil
+	}
+	ret := make([][]int, len(words))
+	for i := range occurrences {
+		ret[occurrences[i].occurrence] = append(ret[occurrences[i].occurrence], occurrences[i].index)
+	}
+	return ret
+}
+
+func kmpSearch(text string, words []string) []occurrenceIndex {
 	j := 0
-	T := computeTable(words)
-	nP := make([]int, len(words))
-	occurences := make([][]int, len(words))
-	k := make([]int, len(words))
-	matched := make([]bool, len(words))
+	T, offsets := computeTable(words)
+	type LoopVariables struct {
+		nP      int
+		k       int
+		matched bool
+	}
+	vars := make([]LoopVariables, len(words))
+	totalWordLen := 0
+	for i := range words {
+		totalWordLen += len(words[i])
+	}
+	occurrences := make([]occurrenceIndex, 0, 10*len(words))
 	for j < len(text) {
 		char := text[j]
-		for i := range matched {
-			matched[i] = false
+		for i := range vars {
+			vars[i].matched = false
 		}
 		matchedAny := false
 		for i := range words {
 			if len(words[i]) == 0 || len(words[i]) > len(text) {
 				continue
 			}
-			matched[i] = words[i][k[i]] == char
-			if matched[i] {
-				k[i] += 1
+			vars[i].matched = words[i][vars[i].k] == char
+			if vars[i].matched {
+				vars[i].k += 1
 				matchedAny = true
-				if k[i] == len(words[i]) {
-					occurences[i] = append(occurences[i], j+1-k[i])
-					nP[i] += 1
-					k[i] = T[i][k[i]]
+				if vars[i].k == len(words[i]) {
+					occurrences = append(occurrences, occurrenceIndex{j + 1 - vars[i].k, i})
+					vars[i].nP += 1
+					vars[i].k = T[offsets[i]+vars[i].k]
 				}
 			}
 		}
 		if matchedAny {
 			j += 1
-			for i := range matched {
-				if !matched[i] {
-					k[i] = T[i][k[i]]
-					if k[i] < 0 {
-						k[i] += 1
+			for i := range vars {
+				if len(words[i]) == 0 {
+					continue
+				}
+				if !vars[i].matched {
+					vars[i].k = T[offsets[i]+vars[i].k]
+					if vars[i].k < 0 {
+						vars[i].k += 1
 					}
 				}
 			}
 		} else {
-			incJ := false
+			jInc := 0
 			for i := range words {
-				k[i] = T[i][k[i]]
-				if k[i] < 0 {
-					k[i] += 1
-					incJ = true
+				if len(words[i]) == 0 {
+					continue
+				}
+				vars[i].k = T[offsets[i]+vars[i].k]
+				if vars[i].k < 0 {
+					vars[i].k += 1
+					jInc = 1
 				}
 			}
-			if incJ {
-				j += 1
-			}
+			j += jInc
 		}
 	}
-	return occurences
+	return occurrences
 }
 
 func multiReplaceAll(text string, words []string, replacements []string) (string, error) {
-	occurenceMatrix := KmpSearch(text, words)
-	totalOccs := 0
-
-	for i := range occurenceMatrix {
-		totalOccs += len(occurenceMatrix[i])
+	if len(text) == 0 {
+		return "", nil
 	}
-	indexWithOccurence := make([][2]int, totalOccs)
-	occIdx := 0
+	occurrences := kmpSearch(text, words)
+	if occurrences == nil {
+		return "", nil
+	}
 	totalReplacementSize := 0
-	for i := range occurenceMatrix {
-		for j := range occurenceMatrix[i] {
-			indexWithOccurence[occIdx] = [2]int{i, occurenceMatrix[i][j]}
-			occIdx += 1
-		}
-		totalReplacementSize += len(occurenceMatrix[i]) * (len(replacements[i]) - len(words[i]))
-	}
-	slices.SortFunc(indexWithOccurence, func(a, b [2]int) int {
-		return cmp.Compare(a[1], b[1])
-	})
-	for i := 0; i < len(indexWithOccurence)-1; i += 1 {
-		if indexWithOccurence[i][1]+len(words[indexWithOccurence[i][0]]) > indexWithOccurence[i+1][1] {
-			return "", fmt.Errorf("unambigious resolution between \"%s\" at %d and \"%s\" at %d", words[indexWithOccurence[i][0]], indexWithOccurence[i][1], words[indexWithOccurence[i+1][0]], indexWithOccurence[i+1][1])
-		}
+	for i := range occurrences {
+		totalReplacementSize += len(replacements[occurrences[i].occurrence]) - len(words[occurrences[i].occurrence])
 	}
 
 	var b strings.Builder
 	b.Grow(len(text) + totalReplacementSize)
 	lastTextIndex := 0
-	for i := range indexWithOccurence {
-		b.WriteString(text[lastTextIndex:indexWithOccurence[i][1]])
-		b.WriteString(replacements[indexWithOccurence[i][0]])
-		lastTextIndex = indexWithOccurence[i][1] + len(words[indexWithOccurence[i][0]])
+	for i := range occurrences {
+		b.WriteString(text[lastTextIndex:occurrences[i].index])
+		b.WriteString(replacements[occurrences[i].occurrence])
+		lastTextIndex = occurrences[i].index + len(words[occurrences[i].occurrence])
 	}
 	if lastTextIndex < len(text) {
 		b.WriteString(text[lastTextIndex:])
