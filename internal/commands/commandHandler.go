@@ -4,6 +4,7 @@ import "fmt"
 
 var commandList []CommandModule = []CommandModule{
 	&HelpCommand{},
+	&VersionCommand{},
 	&InitCommand{},
 	&AddCommand{},
 	&CheckinCommand{},

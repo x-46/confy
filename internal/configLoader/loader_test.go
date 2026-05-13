@@ -160,6 +160,27 @@ func TestApplyArg_BoolField_ExplicitFalse(t *testing.T) {
 	}
 }
 
+func TestRequiresPassword_HelpOnlyDisabled(t *testing.T) {
+	cfg := Config{HelpOnly: true, PrimaryCommandModule: "init"}
+	if requiresPassword(cfg) {
+		t.Fatal("expected help-only config to skip password prompt")
+	}
+}
+
+func TestRequiresPassword_SkipsVersionCommand(t *testing.T) {
+	cfg := Config{PrimaryCommandModule: "version"}
+	if requiresPassword(cfg) {
+		t.Fatal("expected version command to skip password prompt")
+	}
+}
+
+func TestRequiresPassword_RequiresPasswordForInit(t *testing.T) {
+	cfg := Config{PrimaryCommandModule: "init"}
+	if !requiresPassword(cfg) {
+		t.Fatal("expected init command to require password")
+	}
+}
+
 func TestApplyArg_SliceField_AppendsValue(t *testing.T) {
 	cfg := &Config{}
 	applyArg(cfg, CommandLineArg{Key: "fileExtensions", Value: ".txt"})

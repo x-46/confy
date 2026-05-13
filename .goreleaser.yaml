@@ -6,6 +6,8 @@ before:
 
 builds:
   - main: ./...
+    ldflags:
+      - -s -w -X x46/confy/internal/buildinfo.Version={{.Version}} -X x46/confy/internal/buildinfo.Date={{.Date}}
     env:
       - CGO_ENABLED=0
     goos:

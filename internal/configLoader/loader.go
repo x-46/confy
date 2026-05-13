@@ -87,7 +87,7 @@ func InitConfig() (*Config, error) {
 
 	config.PrimaryCommandModule = parsedArgs.BaseModule
 
-	if config.Password == "" && !(config.HelpOnly || config.PrimaryCommandModule == "help") {
+	if config.Password == "" && requiresPassword(config) {
 		fmt.Print("Enter Password: ")
 		bytePassword, err := term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
@@ -98,6 +98,19 @@ func InitConfig() (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func requiresPassword(config Config) bool {
+	if config.HelpOnly {
+		return false
+	}
+
+	switch config.PrimaryCommandModule {
+	case "help", "version":
+		return false
+	default:
+		return true
+	}
 }
 
 func loadConfigFromFile(filePath string) (*Config, error) {
