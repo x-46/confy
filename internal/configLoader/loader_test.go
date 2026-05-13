@@ -7,10 +7,16 @@ import (
 
 // --- argParse ---
 
-func TestArgParse_NoArgs_ReturnsError(t *testing.T) {
-	_, err := argParse([]string{})
-	if err == nil {
-		t.Fatal("expected error for empty args, got nil")
+func TestArgParse_NoArgs_ReturnsHelp(t *testing.T) {
+	config, err := argParse([]string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if config.BaseModule != "help" {
+		t.Errorf("expected BaseModule 'help', got '%s'", config.BaseModule)
+	}
+	if len(config.Args) != 0 {
+		t.Errorf("expected no args, got %d", len(config.Args))
 	}
 }
 
