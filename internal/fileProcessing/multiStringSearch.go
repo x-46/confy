@@ -1,6 +1,7 @@
 package fileprocessing
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -55,7 +56,10 @@ func wrappedKmpSearch(text string, words []string) [][]int {
 	if allEmpty {
 		return nil
 	}
-	occurrences := kmpSearch(text, words)
+	occurrences, err := kmpSearch(text, words)
+	if err != nil {
+		return nil
+	}
 	if len(occurrences) == 0 {
 		return nil
 	}
@@ -66,7 +70,7 @@ func wrappedKmpSearch(text string, words []string) [][]int {
 	return ret
 }
 
-func kmpSearch(text string, words []string) []occurrenceIndex {
+func kmpSearch(text string, words []string) ([]occurrenceIndex, error) {
 	j := 0
 	T, offsets := computeTable(words)
 	type LoopVariables struct {
@@ -95,6 +99,10 @@ func kmpSearch(text string, words []string) []occurrenceIndex {
 				vars[i].k += 1
 				matchedAny = true
 				if vars[i].k == len(words[i]) {
+					occ_len := len(occurrences)
+					if occ_len != 0 && occurrences[occ_len-1].index+len(words[occurrences[occ_len-1].occurrence]) > j+1-vars[i].k {
+						return nil, fmt.Errorf("unambigious resolution between \"%s\" at %d and \"%s\" at %d", words[occurrences[occ_len-1].occurrence], occurrences[occ_len-1].index, words[i], j+1-vars[i].k)
+					}
 					occurrences = append(occurrences, occurrenceIndex{j + 1 - vars[i].k, i})
 					vars[i].nP += 1
 					vars[i].k = T[offsets[i]+vars[i].k]
@@ -129,14 +137,17 @@ func kmpSearch(text string, words []string) []occurrenceIndex {
 			j += jInc
 		}
 	}
-	return occurrences
+	return occurrences, nil
 }
 
 func multiReplaceAll(text string, words []string, replacements []string) (string, error) {
 	if len(text) == 0 {
 		return "", nil
 	}
-	occurrences := kmpSearch(text, words)
+	occurrences, err := kmpSearch(text, words)
+	if err != nil {
+		return "", err
+	}
 	if occurrences == nil {
 		return "", nil
 	}
@@ -144,8 +155,12 @@ func multiReplaceAll(text string, words []string, replacements []string) (string
 	for i := range occurrences {
 		totalReplacementSize += len(replacements[occurrences[i].occurrence]) - len(words[occurrences[i].occurrence])
 	}
+	totalReplacementSize = max(0, totalReplacementSize)
 
 	var b strings.Builder
+	if len(text)+totalReplacementSize < 0 {
+		return "", nil
+	}
 	b.Grow(len(text) + totalReplacementSize)
 	lastTextIndex := 0
 	for i := range occurrences {
