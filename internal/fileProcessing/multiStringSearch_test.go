@@ -9,153 +9,164 @@ import (
 	"testing"
 )
 
-type IndexTest struct {
-	haystack string
-	needle   string
-	out      []int
+type indexTestResult struct {
+	Err        bool
+	Occurences []occurrenceIndex
 }
 
-var indexTests = []IndexTest{
-	{"", "a", []int{-1}},
-	{"", "foo", []int{-1}},
-	{"fo", "foo", []int{-1}},
-	{"foo", "foo", []int{0}},
-	{"foo", "f", []int{0}},
-	{"oofofoofooo", "f", []int{2, 4, 7}},
-	{"oofofoofooo", "foo", []int{4, 7}},
-	{"barfoobarfoo", "foo", []int{3, 9}},
-	{"foo", "o", []int{1, 2}},
-	{"abcABCabc", "A", []int{3}},
-	{"abcABCabc", "a", []int{0, 6}},
-	{"", "", []int{-1}},
-	{"", "a", []int{-1}},
-	{"", "foo", []int{-1}},
-	{"fo", "foo", []int{-1}},
-	{"foo", "foo", []int{0}},
-	{"foo", "", []int{-1}},
-	{"foo", "o", []int{1, 2}},
-	{"jrzm6jjhorimglljrea4w3rlgosts0w2gia17hno2td4qd1jz", "jz", []int{47}},
-	{"ekkuk5oft4eq0ocpacknhwouic1uua46unx12l37nioq9wbpnocqks6", "ks6", []int{52}},
-	{"999f2xmimunbuyew5vrkla9cpwhmxan8o98ec", "98ec", []int{33}},
-	{"9lpt9r98i04k8bz6c6dsrthb96bhi", "96bhi", []int{24}},
-	{"55u558eqfaod2r2gu42xxsu631xf0zobs5840vl", "5840vl", []int{33}},
-	{"", "a", []int{-1}},
-	{"x", "a", []int{-1}},
-	{"x", "x", []int{0}},
-	{"abc", "a", []int{0}},
-	{"abc", "b", []int{1}},
-	{"abc", "c", []int{2}},
-	{"abc", "x", []int{-1}},
-	{"", "ab", []int{-1}},
-	{"bc", "ab", []int{-1}},
-	{"ab", "ab", []int{0}},
-	{"xab", "ab", []int{1}},
-	{"xab"[:2], "ab", []int{-1}},
-	{"", "abc", []int{-1}},
-	{"xbc", "abc", []int{-1}},
-	{"abc", "abc", []int{0}},
-	{"xabc", "abc", []int{1}},
-	{"xabc"[:3], "abc", []int{-1}},
-	{"xabxc", "abc", []int{-1}},
-	{"", "abcd", []int{-1}},
-	{"xbcd", "abcd", []int{-1}},
-	{"abcd", "abcd", []int{0}},
-	{"xabcd", "abcd", []int{1}},
-	{"xyabcd"[:5], "abcd", []int{-1}},
-	{"xbcqq", "abcqq", []int{-1}},
-	{"abcqq", "abcqq", []int{0}},
-	{"xabcqq", "abcqq", []int{1}},
-	{"xyabcqq"[:6], "abcqq", []int{-1}},
-	{"xabxcqq", "abcqq", []int{-1}},
-	{"xabcqxq", "abcqq", []int{-1}},
-	{"", "01234567", []int{-1}},
-	{"32145678", "01234567", []int{-1}},
-	{"01234567", "01234567", []int{0}},
-	{"x01234567", "01234567", []int{1}},
-	{"x0123456x01234567", "01234567", []int{9}},
-	{"xx01234567"[:9], "01234567", []int{-1}},
-	{"", "0123456789", []int{-1}},
-	{"3214567844", "0123456789", []int{-1}},
-	{"0123456789", "0123456789", []int{0}},
-	{"x0123456789", "0123456789", []int{1}},
-	{"x012345678x0123456789", "0123456789", []int{11}},
-	{"xyz0123456789"[:12], "0123456789", []int{-1}},
-	{"x01234567x89", "0123456789", []int{-1}},
-	{"", "0123456789012345", []int{-1}},
-	{"3214567889012345", "0123456789012345", []int{-1}},
-	{"0123456789012345", "0123456789012345", []int{0}},
-	{"x0123456789012345", "0123456789012345", []int{1}},
-	{"x012345678901234x0123456789012345", "0123456789012345", []int{17}},
-	{"", "01234567890123456789", []int{-1}},
-	{"32145678890123456789", "01234567890123456789", []int{-1}},
-	{"01234567890123456789", "01234567890123456789", []int{0}},
-	{"x01234567890123456789", "01234567890123456789", []int{1}},
-	{"x0123456789012345678x01234567890123456789", "01234567890123456789", []int{21}},
-	{"xyz01234567890123456789"[:22], "01234567890123456789", []int{-1}},
-	{"", "0123456789012345678901234567890", []int{-1}},
-	{"321456788901234567890123456789012345678911", "0123456789012345678901234567890", []int{-1}},
-	{"0123456789012345678901234567890", "0123456789012345678901234567890", []int{0}},
-	{"x0123456789012345678901234567890", "0123456789012345678901234567890", []int{1}},
-	{"x012345678901234567890123456789x0123456789012345678901234567890", "0123456789012345678901234567890", []int{32}},
-	{"xyz0123456789012345678901234567890"[:33], "0123456789012345678901234567890", []int{-1}},
-	{"", "01234567890123456789012345678901", []int{-1}},
-	{"32145678890123456789012345678901234567890211", "01234567890123456789012345678901", []int{-1}},
-	{"01234567890123456789012345678901", "01234567890123456789012345678901", []int{0}},
-	{"x01234567890123456789012345678901", "01234567890123456789012345678901", []int{1}},
-	{"x0123456789012345678901234567890x01234567890123456789012345678901", "01234567890123456789012345678901", []int{33}},
-	{"xyz01234567890123456789012345678901"[:34], "01234567890123456789012345678901", []int{-1}},
-	{"xxxxxx012345678901234567890123456789012345678901234567890123456789012", "012345678901234567890123456789012345678901234567890123456789012", []int{6}},
-	{"", "0123456789012345678901234567890123456789", []int{-1}},
-	{"xx012345678901234567890123456789012345678901234567890123456789012", "0123456789012345678901234567890123456789", []int{-1}},
-	{"xx012345678901234567890123456789012345678901234567890123456789012"[:41], "0123456789012345678901234567890123456789", []int{-1}},
-	{"xx012345678901234567890123456789012345678901234567890123456789012", "0123456789012345678901234567890123456xxx", []int{-1}},
-	{"xx0123456789012345678901234567890123456789012345678901234567890120123456789012345678901234567890123456xxx", "0123456789012345678901234567890123456xxx", []int{65}},
-	{"oxoxoxoxoxoxoxoxoxoxoxoy", "oy", []int{22}},
-	{"oxoxoxoxoxoxoxoxoxoxoxox", "oy", []int{-1}},
-	{"oxoxoxoxoxoxoxoxoxoxox☺", "☺", []int{22}},
-	{"xx0123456789012345678901234567890123456789012345678901234567890120123456789012345678901234567890123456xxx\xed\x9f\xc0", "\xed\x9f\xc0", []int{105}},
-	{"aabbaa", "aa", []int{0, 4}},
+type indexTest struct {
+	Haystack string
+	Needles  []string
+	Mode     AmbiguousResolutionMode
+	Result   indexTestResult
+}
+
+var indexTests = []indexTest{
+	{"", []string{"a"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"", []string{"foo"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"fo", []string{"foo"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"foo", []string{"f"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"oofofoofooo", []string{"f"}, ReturnError, indexTestResult{false, []occurrenceIndex{{2, 0}, {4, 0}, {7, 0}}}},
+	{"oofofoofooo", []string{"foo"}, ReturnError, indexTestResult{false, []occurrenceIndex{{4, 0}, {7, 0}}}},
+	{"barfoobarfoo", []string{"foo"}, ReturnError, indexTestResult{false, []occurrenceIndex{{3, 0}, {9, 0}}}},
+	{"foo", []string{"o"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}, {2, 0}}}},
+	{"abcABCabc", []string{"A"}, ReturnError, indexTestResult{false, []occurrenceIndex{{3, 0}}}},
+	{"abcABCabc", []string{"a"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}, {6, 0}}}},
+	{"", []string{""}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"", []string{"a"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"", []string{"foo"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"fo", []string{"foo"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"foo", []string{"foo"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"foo", []string{""}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"foo", []string{"o"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}, {2, 0}}}},
+	{"jrzm6jjhorimglljrea4w3rlgosts0w2gia17hno2td4qd1jz", []string{"jz"}, ReturnError, indexTestResult{false, []occurrenceIndex{{47, 0}}}},
+	{"ekkuk5oft4eq0ocpacknhwouic1uua46unx12l37nioq9wbpnocqks6", []string{"ks6"}, ReturnError, indexTestResult{false, []occurrenceIndex{{52, 0}}}},
+	{"999f2xmimunbuyew5vrkla9cpwhmxan8o98ec", []string{"98ec"}, ReturnError, indexTestResult{false, []occurrenceIndex{{33, 0}}}},
+	{"9lpt9r98i04k8bz6c6dsrthb96bhi", []string{"96bhi"}, ReturnError, indexTestResult{false, []occurrenceIndex{{24, 0}}}},
+	{"55u558eqfaod2r2gu42xxsu631xf0zobs5840vl", []string{"5840vl"}, ReturnError, indexTestResult{false, []occurrenceIndex{{33, 0}}}},
+	{"", []string{"a"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"x", []string{"a"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"x", []string{"x"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"abc", []string{"a"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"abc", []string{"b"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}}}},
+	{"abc", []string{"c"}, ReturnError, indexTestResult{false, []occurrenceIndex{{2, 0}}}},
+	{"abc", []string{"x"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"", []string{"ab"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"bc", []string{"ab"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"ab", []string{"ab"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"xab", []string{"ab"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}}}},
+	{"xab"[:2], []string{"ab"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"", []string{"abc"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"xbc", []string{"abc"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"abc", []string{"abc"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"xabc", []string{"abc"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}}}},
+	{"xabc"[:3], []string{"abc"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"xabxc", []string{"abc"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"", []string{"abcd"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"xbcd", []string{"abcd"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"abcd", []string{"abcd"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"xabcd", []string{"abcd"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}}}},
+	{"xyabcd"[:5], []string{"abcd"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"xbcqq", []string{"abcqq"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"abcqq", []string{"abcqq"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"xabcqq", []string{"abcqq"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}}}},
+	{"xyabcqq"[:6], []string{"abcqq"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"xabxcqq", []string{"abcqq"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"xabcqxq", []string{"abcqq"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"", []string{"01234567"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"32145678", []string{"01234567"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"01234567", []string{"01234567"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"x01234567", []string{"01234567"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}}}},
+	{"x0123456x01234567", []string{"01234567"}, ReturnError, indexTestResult{false, []occurrenceIndex{{9, 0}}}},
+	{"xx01234567"[:9], []string{"01234567"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"", []string{"0123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"3214567844", []string{"0123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"0123456789", []string{"0123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"x0123456789", []string{"0123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}}}},
+	{"x012345678x0123456789", []string{"0123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{{11, 0}}}},
+	{"xyz0123456789"[:12], []string{"0123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"x01234567x89", []string{"0123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"", []string{"0123456789012345"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"3214567889012345", []string{"0123456789012345"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"0123456789012345", []string{"0123456789012345"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"x0123456789012345", []string{"0123456789012345"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}}}},
+	{"x012345678901234x0123456789012345", []string{"0123456789012345"}, ReturnError, indexTestResult{false, []occurrenceIndex{{17, 0}}}},
+	{"", []string{"01234567890123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"32145678890123456789", []string{"01234567890123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"01234567890123456789", []string{"01234567890123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"x01234567890123456789", []string{"01234567890123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}}}},
+	{"x0123456789012345678x01234567890123456789", []string{"01234567890123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{{21, 0}}}},
+	{"xyz01234567890123456789"[:22], []string{"01234567890123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"", []string{"0123456789012345678901234567890"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"321456788901234567890123456789012345678911", []string{"0123456789012345678901234567890"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"0123456789012345678901234567890", []string{"0123456789012345678901234567890"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"x0123456789012345678901234567890", []string{"0123456789012345678901234567890"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}}}},
+	{"x012345678901234567890123456789x0123456789012345678901234567890", []string{"0123456789012345678901234567890"}, ReturnError, indexTestResult{false, []occurrenceIndex{{32, 0}}}},
+	{"xyz0123456789012345678901234567890"[:33], []string{"0123456789012345678901234567890"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"", []string{"01234567890123456789012345678901"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"32145678890123456789012345678901234567890211", []string{"01234567890123456789012345678901"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"01234567890123456789012345678901", []string{"01234567890123456789012345678901"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"x01234567890123456789012345678901", []string{"01234567890123456789012345678901"}, ReturnError, indexTestResult{false, []occurrenceIndex{{1, 0}}}},
+	{"x0123456789012345678901234567890x01234567890123456789012345678901", []string{"01234567890123456789012345678901"}, ReturnError, indexTestResult{false, []occurrenceIndex{{33, 0}}}},
+	{"xyz01234567890123456789012345678901"[:34], []string{"01234567890123456789012345678901"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"xxxxxx012345678901234567890123456789012345678901234567890123456789012", []string{"012345678901234567890123456789012345678901234567890123456789012"}, ReturnError, indexTestResult{false, []occurrenceIndex{{6, 0}}}},
+	{"", []string{"0123456789012345678901234567890123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"xx012345678901234567890123456789012345678901234567890123456789012", []string{"0123456789012345678901234567890123456789"}, ReturnError, indexTestResult{true, []occurrenceIndex{}}},
+	{"xx012345678901234567890123456789012345678901234567890123456789012", []string{"0123456789012345678901234567890123456789"}, PickFirst, indexTestResult{false, []occurrenceIndex{{2, 0}}}},
+	{"xx012345678901234567890123456789012345678901234567890123456789012", []string{"0123456789012345678901234567890123456789"}, PickSecond, indexTestResult{false, []occurrenceIndex{{22, 0}}}},
+	{"xx012345678901234567890123456789012345678901234567890123456789012"[:41], []string{"0123456789012345678901234567890123456789"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"xx012345678901234567890123456789012345678901234567890123456789012", []string{"0123456789012345678901234567890123456xxx"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"xx0123456789012345678901234567890123456789012345678901234567890120123456789012345678901234567890123456xxx", []string{"0123456789012345678901234567890123456xxx"}, ReturnError, indexTestResult{false, []occurrenceIndex{{65, 0}}}},
+	{"oxoxoxoxoxoxoxoxoxoxoxoy", []string{"oy"}, ReturnError, indexTestResult{false, []occurrenceIndex{{22, 0}}}},
+	{"oxoxoxoxoxoxoxoxoxoxoxox", []string{"oy"}, ReturnError, indexTestResult{false, []occurrenceIndex{}}},
+	{"oxoxoxoxoxoxoxoxoxoxox☺", []string{"☺"}, ReturnError, indexTestResult{false, []occurrenceIndex{{22, 0}}}},
+	{"xx0123456789012345678901234567890123456789012345678901234567890120123456789012345678901234567890123456xxx\xed\x9f\xc0", []string{"\xed\x9f\xc0"}, ReturnError, indexTestResult{false, []occurrenceIndex{{105, 0}}}},
+	{"aabbaa", []string{"aa"}, ReturnError, indexTestResult{false, []occurrenceIndex{{0, 0}, {4, 0}}}},
+	{"aabbaa", []string{"aa", "a"}, PickFirst, indexTestResult{false, []occurrenceIndex{{0, 1}, {1, 1}, {4, 1}, {5, 1}}}},
+	{"aabbaa", []string{"aa", "a"}, PickSecond, indexTestResult{false, []occurrenceIndex{{1, 1}, {5, 1}}}},
+	{"aabbaa", []string{"aab", "abba"}, PickFirst, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
+	{"aabbaa", []string{"aab", "abba"}, PickSecond, indexTestResult{false, []occurrenceIndex{{1, 1}}}},
+	{"aabbaa", []string{"aab", "aabb"}, PickSecond, indexTestResult{false, []occurrenceIndex{{0, 1}}}},
+	{"oxoxoxo", []string{"oxo", "ox"}, PickFirst, indexTestResult{false, []occurrenceIndex{{0, 1}, {2, 1}, {4, 1}}}},
+	{"oxoxoxo", []string{"oxo", "xox"}, PickFirst, indexTestResult{false, []occurrenceIndex{{0, 0}, {3, 1}}}},
 }
 
 func TestKmpSearch(t *testing.T) {
 	for _, test := range indexTests {
-		actual := wrappedKmpSearch(test.haystack, []string{test.needle})
-		if actual == nil {
-			actual = [][]int{{-1}}
-		}
-		if !slices.Equal(actual[0], test.out) {
-			t.Errorf("KmpSearch(%q,%q) = %v; want %v", test.haystack, test.needle, actual, test.out)
+		result, err := wrappedKmpSearch(test.Haystack, test.Needles, test.Mode)
+		if !slices.Equal(result, test.Result.Occurences) || ((err != nil) != test.Result.Err) {
+			t.Errorf("KmpSearch(%q,%q) = %t, %v, %v; want %v", test.Haystack, test.Needles, err != nil, result, test.Mode, test.Result)
 		}
 	}
 }
 
-type ReplacementReturn struct {
+type replacementReturn struct {
 	s   string
 	err bool
 }
-type ReplacementTest struct {
+type replacementTest struct {
 	haystack     string
 	needles      []string
 	replacements []string
-	result       ReplacementReturn
+	result       replacementReturn
 }
 
-var multiReplaceAllTest = []ReplacementTest{
-	{"", []string{""}, []string{""}, ReplacementReturn{"", false}},
-	{"a", []string{"a"}, []string{"b"}, ReplacementReturn{"b", false}},
-	{"aaa", []string{"a"}, []string{"b"}, ReplacementReturn{"bbb", false}},
-	{"aaa", []string{"a"}, []string{"bbb"}, ReplacementReturn{"bbbbbbbbb", false}},
-	{"aaa", []string{"aa"}, []string{"b"}, ReplacementReturn{"", true}},
-	{"aabbaa", []string{"aa", "bb"}, []string{"bb", "aa"}, ReplacementReturn{"bbaabb", false}},
-	{"ǂo", []string{"ǂ"}, []string{"a"}, ReplacementReturn{"ao", false}},
-	{"ǂo", []string{"ǂ"}, []string{"Ɵ"}, ReplacementReturn{"Ɵo", false}},
-	{"ǂȭ", []string{"ȴ"}, []string{"ȹ"}, ReplacementReturn{"ǂȭ", false}},
-	{"ǂȭ", []string{"ȭ"}, []string{"ȴ"}, ReplacementReturn{"ǂȴ", false}},
-	{"ǂɶȭɶ", []string{"ɶ"}, []string{"ȴ"}, ReplacementReturn{"ǂȴȭȴ", false}},
-	{"ǂɶȭɶ", []string{"ɶ", "ȭ", "ǂ"}, []string{"ȴ", "ȴ", "ȴ"}, ReplacementReturn{"ȴȴȴȴ", false}},
-	{"xx012345678901234567890123456789012345678901234567890123456789012", []string{"0123456789012345678901234567890123456789"}, []string{"a"}, ReplacementReturn{"", true}},
-	{"xx0123456789012345678901234567890123456789012345678901234567890120123456789012345678901234567890123456xxx\xed\x9f\xc0", []string{"\xed\x9f\xc0"}, []string{"a"}, ReplacementReturn{"xx0123456789012345678901234567890123456789012345678901234567890120123456789012345678901234567890123456xxxa", false}},
-	{"xx012345678901234567890123456789012345678901234567890123456789012", []string{"01234567890123456789"}, []string{"a"}, ReplacementReturn{"", true}},
+var multiReplaceAllTest = []replacementTest{
+	{"", []string{""}, []string{""}, replacementReturn{"", false}},
+	{"a", []string{"a"}, []string{"b"}, replacementReturn{"b", false}},
+	{"aaa", []string{"a"}, []string{"b"}, replacementReturn{"bbb", false}},
+	{"aaa", []string{"a"}, []string{"bbb"}, replacementReturn{"bbbbbbbbb", false}},
+	{"aaa", []string{"aa"}, []string{"b"}, replacementReturn{"", true}},
+	{"aabbaa", []string{"aa", "bb"}, []string{"bb", "aa"}, replacementReturn{"bbaabb", false}},
+	{"ǂo", []string{"ǂ"}, []string{"a"}, replacementReturn{"ao", false}},
+	{"ǂo", []string{"ǂ"}, []string{"Ɵ"}, replacementReturn{"Ɵo", false}},
+	{"ǂȭ", []string{"ȴ"}, []string{"ȹ"}, replacementReturn{"ǂȭ", false}},
+	{"ǂȭ", []string{"ȭ"}, []string{"ȴ"}, replacementReturn{"ǂȴ", false}},
+	{"ǂɶȭɶ", []string{"ɶ"}, []string{"ȴ"}, replacementReturn{"ǂȴȭȴ", false}},
+	{"ǂɶȭɶ", []string{"ɶ", "ȭ", "ǂ"}, []string{"ȴ", "ȴ", "ȴ"}, replacementReturn{"ȴȴȴȴ", false}},
+	{"xx012345678901234567890123456789012345678901234567890123456789012", []string{"0123456789012345678901234567890123456789"}, []string{"a"}, replacementReturn{"", true}},
+	{"xx0123456789012345678901234567890123456789012345678901234567890120123456789012345678901234567890123456xxx\xed\x9f\xc0", []string{"\xed\x9f\xc0"}, []string{"a"}, replacementReturn{"xx0123456789012345678901234567890123456789012345678901234567890120123456789012345678901234567890123456xxxa", false}},
+	{"xx012345678901234567890123456789012345678901234567890123456789012", []string{"01234567890123456789"}, []string{"a"}, replacementReturn{"", true}},
 }
 
 func TestMultiReplaceAll(t *testing.T) {
@@ -163,7 +174,7 @@ func TestMultiReplaceAll(t *testing.T) {
 		actual, err := multiReplaceAll(test.haystack, test.needles, test.replacements)
 		errorResult := err != nil
 		if test.result.s != actual || errorResult != test.result.err {
-			t.Errorf("multiReplaceAll(%q,%q) = %v; want %v", test.haystack, test.needles, ReplacementReturn{actual, errorResult}, test.result)
+			t.Errorf("multiReplaceAll(%q,%q) = %v; want %v", test.haystack, test.needles, replacementReturn{actual, errorResult}, test.result)
 		}
 	}
 }

@@ -5,6 +5,33 @@ import (
 	"strings"
 )
 
+type AmbiguousResolutionMode int
+
+const (
+	ReturnError AmbiguousResolutionMode = iota
+	PickFirst
+	PickSecond
+	PickBoth
+)
+
+func (r AmbiguousResolutionMode) String() string {
+	switch r {
+	case ReturnError:
+		return "ReturnError"
+	case PickFirst:
+		return "PickFirst"
+	case PickSecond:
+		return "PickSecond"
+	case PickBoth:
+		return "PickBoth"
+	}
+	return "unknown value for enum AmbiguousResolutionMode"
+}
+
+type occurrenceIndex struct {
+	index, occurrence int
+}
+
 func computeTable(words []string) ([]int, []int) {
 	offsets := make([]int, len(words))
 	for i := 1; i < len(words); i++ {
@@ -35,16 +62,12 @@ func computeTable(words []string) ([]int, []int) {
 	return T, offsets
 }
 
-type occurrenceIndex struct {
-	index, occurrence int
-}
-
-func wrappedKmpSearch(text string, words []string) [][]int {
+func wrappedKmpSearch(text string, words []string, mode AmbiguousResolutionMode) ([]occurrenceIndex, error) {
 	if len(text) == 0 || len(words) == 0 {
-		return nil
+		return []occurrenceIndex{}, nil
 	}
 	if len(words) == 1 && len(words[0]) == 0 {
-		return nil
+		return []occurrenceIndex{}, nil
 	}
 	allEmpty := true
 	for i := range words {
@@ -54,24 +77,12 @@ func wrappedKmpSearch(text string, words []string) [][]int {
 		}
 	}
 	if allEmpty {
-		return nil
+		return []occurrenceIndex{}, nil
 	}
-	occurrences, err := kmpSearch(text, words)
-	if err != nil {
-		return nil
-	}
-	if len(occurrences) == 0 {
-		return nil
-	}
-	ret := make([][]int, len(words))
-	for i := range occurrences {
-		ret[occurrences[i].occurrence] = append(ret[occurrences[i].occurrence], occurrences[i].index)
-	}
-	return ret
+	return kmpSearch(text, words, mode)
 }
 
-func kmpSearch(text string, words []string) ([]occurrenceIndex, error) {
-	j := 0
+func kmpSearch(text string, words []string, mode AmbiguousResolutionMode) ([]occurrenceIndex, error) {
 	T, offsets := computeTable(words)
 	type LoopVariables struct {
 		nP      int
@@ -83,13 +94,10 @@ func kmpSearch(text string, words []string) ([]occurrenceIndex, error) {
 	for i := range words {
 		totalWordLen += len(words[i])
 	}
+	j := 0
 	occurrences := make([]occurrenceIndex, 0, 10*len(words))
 	for j < len(text) {
 		char := text[j]
-		for i := range vars {
-			vars[i].matched = false
-		}
-		matchedAny := false
 		for i := range words {
 			if len(words[i]) == 0 || len(words[i]) > len(text) {
 				continue
@@ -97,45 +105,43 @@ func kmpSearch(text string, words []string) ([]occurrenceIndex, error) {
 			vars[i].matched = words[i][vars[i].k] == char
 			if vars[i].matched {
 				vars[i].k += 1
-				matchedAny = true
-				if vars[i].k == len(words[i]) {
-					occ_len := len(occurrences)
-					if occ_len != 0 && occurrences[occ_len-1].index+len(words[occurrences[occ_len-1].occurrence]) > j+1-vars[i].k {
-						return nil, fmt.Errorf("unambigious resolution between \"%s\" at %d and \"%s\" at %d", words[occurrences[occ_len-1].occurrence], occurrences[occ_len-1].index, words[i], j+1-vars[i].k)
-					}
+			}
+			if vars[i].k == len(words[i]) {
+				occLen := len(occurrences)
+				if occLen == 0 || mode == PickBoth || occurrences[occLen-1].index+len(words[occurrences[occLen-1].occurrence]) <= j+1-vars[i].k {
 					occurrences = append(occurrences, occurrenceIndex{j + 1 - vars[i].k, i})
+					vars[i].nP += 1
+					vars[i].k = T[offsets[i]+vars[i].k]
+					continue
+				}
+				switch mode {
+				case ReturnError:
+					lastOcc := occurrences[occLen-1]
+					return nil, fmt.Errorf("Ambiguous resolution between \"%s\" at %d and \"%s\" at %d", words[lastOcc.occurrence], lastOcc.index, words[i], j+1-vars[i].k)
+				case PickFirst:
+					vars[i].k = T[offsets[i]+vars[i].k]
+				case PickSecond:
+					vars[occurrences[occLen-1].occurrence].nP -= 1
+					occurrences[occLen-1] = occurrenceIndex{j + 1 - vars[i].k, i}
 					vars[i].nP += 1
 					vars[i].k = T[offsets[i]+vars[i].k]
 				}
 			}
 		}
-		if matchedAny {
-			j += 1
-			for i := range vars {
-				if len(words[i]) == 0 {
-					continue
-				}
-				if !vars[i].matched {
-					vars[i].k = T[offsets[i]+vars[i].k]
-					if vars[i].k < 0 {
-						vars[i].k += 1
-					}
-				}
+		for i := range words {
+			if len(words[i]) == 0 || vars[i].matched {
+				continue
 			}
-		} else {
-			jInc := 0
-			for i := range words {
-				if len(words[i]) == 0 {
-					continue
-				}
-				vars[i].k = T[offsets[i]+vars[i].k]
-				if vars[i].k < 0 {
-					vars[i].k += 1
-					jInc = 1
-				}
+			vars[i].k = T[offsets[i]+vars[i].k]
+			if vars[i].k < 0 {
+				vars[i].k += 1
 			}
-			j += jInc
+			if words[i][vars[i].k] == char {
+				vars[i].k += 1
+			}
+			vars[i].matched = false
 		}
+		j += 1
 	}
 	return occurrences, nil
 }
@@ -144,7 +150,7 @@ func multiReplaceAll(text string, words []string, replacements []string) (string
 	if len(text) == 0 {
 		return "", nil
 	}
-	occurrences, err := kmpSearch(text, words)
+	occurrences, err := kmpSearch(text, words, ReturnError)
 	if err != nil {
 		return "", err
 	}
