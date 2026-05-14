@@ -10,6 +10,8 @@ var commandList []CommandModule = []CommandModule{
 	&CheckinCommand{},
 	&CheckoutCommand{},
 	&FindCommand{},
+	&HookCommand{},
+	&UnhookCommand{},
 }
 
 func GetCommandByName(name string) (CommandModule, error) {

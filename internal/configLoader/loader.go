@@ -108,7 +108,7 @@ func requiresPassword(config Config) bool {
 	}
 
 	switch config.PrimaryCommandModule {
-	case "help", "version":
+	case "help", "version", "hook", "unhook":
 		return false
 	default:
 		return true

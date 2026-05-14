@@ -18,13 +18,13 @@ func (c *FindCommand) GetName() string {
 
 func (c *FindCommand) ValidateConfig(config *configloader.Config) error {
 	if config.DBPath == "" {
-		return fmt.Errorf("DBPath is required for check command")
+		return fmt.Errorf("DBPath is required for find command")
 	}
 	if config.SourceDir == "" {
-		return fmt.Errorf("SourceDir is required for check command")
+		return fmt.Errorf("SourceDir is required for find command")
 	}
 	if config.Password == "" {
-		return fmt.Errorf("Password is required for check command")
+		return fmt.Errorf("Password is required for find command")
 	}
 
 	return nil
@@ -87,7 +87,7 @@ func (c *FindCommand) PrintShortHelp() {
 }
 
 func (c *FindCommand) PrintLongHelp() {
-	fmt.Println("Command: check")
+	fmt.Println("Command: find")
 	fmt.Println("Description: Find for and report remaining secrets.")
 	fmt.Println("Options:")
 	printConfigOptions("sourceDir", "dbPath", "password", "fileExtensions", "configFilePath", "errOnFind")
