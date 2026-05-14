@@ -14,7 +14,7 @@ echo "[confy pre-commit hook]"
 # assign stdin to keyboard
 exec < /dev/tty
 # call confy find and redirect stderr to /dev/null
-go run . find --errOnFind 2> /dev/null
+confy find --errOnFind 2> /dev/null
 # check exit code and exit if confy found remaining secrets
 exitcode=$?
 if [ $exitcode == 1 ]; then
