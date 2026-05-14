@@ -127,6 +127,7 @@ var indexTests = []indexTest{
 	{"aabbaa", []string{"aab", "abba"}, PickFirst, indexTestResult{false, []occurrenceIndex{{0, 0}}}},
 	{"aabbaa", []string{"aab", "abba"}, PickSecond, indexTestResult{false, []occurrenceIndex{{1, 1}}}},
 	{"aabbaa", []string{"aab", "aabb"}, PickSecond, indexTestResult{false, []occurrenceIndex{{0, 1}}}},
+	{"aaababaaa", []string{"aaab", "abab"}, PickBoth, indexTestResult{false, []occurrenceIndex{{0, 0}, {2, 1}}}},
 	{"oxoxoxo", []string{"oxo", "ox"}, PickFirst, indexTestResult{false, []occurrenceIndex{{0, 1}, {2, 1}, {4, 1}}}},
 	{"oxoxoxo", []string{"oxo", "xox"}, PickFirst, indexTestResult{false, []occurrenceIndex{{0, 0}, {3, 1}}}},
 }

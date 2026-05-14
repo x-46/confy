@@ -106,26 +106,29 @@ func kmpSearch(text string, words []string, mode AmbiguousResolutionMode) ([]occ
 			if vars[i].matched {
 				vars[i].k += 1
 			}
-			if vars[i].k == len(words[i]) {
-				occLen := len(occurrences)
-				if occLen == 0 || mode == PickBoth || occurrences[occLen-1].index+len(words[occurrences[occLen-1].occurrence]) <= j+1-vars[i].k {
-					occurrences = append(occurrences, occurrenceIndex{j + 1 - vars[i].k, i})
-					vars[i].nP += 1
-					vars[i].k = T[offsets[i]+vars[i].k]
-					continue
-				}
-				switch mode {
-				case ReturnError:
-					lastOcc := occurrences[occLen-1]
-					return nil, fmt.Errorf("Ambiguous resolution between \"%s\" at %d and \"%s\" at %d", words[lastOcc.occurrence], lastOcc.index, words[i], j+1-vars[i].k)
-				case PickFirst:
-					vars[i].k = T[offsets[i]+vars[i].k]
-				case PickSecond:
-					vars[occurrences[occLen-1].occurrence].nP -= 1
-					occurrences[occLen-1] = occurrenceIndex{j + 1 - vars[i].k, i}
-					vars[i].nP += 1
-					vars[i].k = T[offsets[i]+vars[i].k]
-				}
+			if vars[i].k != len(words[i]) {
+				continue
+			}
+
+			occLen := len(occurrences)
+			if occLen == 0 || mode == PickBoth || occurrences[occLen-1].index+len(words[occurrences[occLen-1].occurrence]) <= j+1-vars[i].k {
+				occurrences = append(occurrences, occurrenceIndex{j + 1 - vars[i].k, i})
+				vars[i].nP += 1
+				vars[i].k = T[offsets[i]+vars[i].k]
+				continue
+			}
+
+			switch mode {
+			case ReturnError:
+				lastOcc := occurrences[occLen-1]
+				return nil, fmt.Errorf("Ambiguous resolution between \"%s\" at %d and \"%s\" at %d", words[lastOcc.occurrence], lastOcc.index, words[i], j+1-vars[i].k)
+			case PickFirst:
+				vars[i].k = T[offsets[i]+vars[i].k]
+			case PickSecond:
+				vars[occurrences[occLen-1].occurrence].nP -= 1
+				occurrences[occLen-1] = occurrenceIndex{j + 1 - vars[i].k, i}
+				vars[i].nP += 1
+				vars[i].k = T[offsets[i]+vars[i].k]
 			}
 		}
 		for i := range words {
