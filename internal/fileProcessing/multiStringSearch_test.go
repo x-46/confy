@@ -236,3 +236,28 @@ func BenchmarkMultiReplaceAll(b *testing.B) {
 		}
 	}
 }
+
+type multipleIndexTest struct {
+	text    string
+	needles []string
+	result  []PatternMatch
+}
+
+var multipleIndexTests = []multipleIndexTest{
+	{"", []string{""}, []PatternMatch{}},
+	{"", []string{"a"}, []PatternMatch{}},
+	{"a", []string{""}, []PatternMatch{}},
+	{"a\nb\na", []string{"a"}, []PatternMatch{{0, 0, 1, 1}, {0, 4, 3, 1}}},
+	{"a\nb\na", []string{"b"}, []PatternMatch{{0, 2, 2, 1}}},
+	{"b\na\nn\na\nn\na", []string{"n"}, []PatternMatch{{0, 4, 3, 1}, {0, 8, 5, 1}}},
+	{"ba\nmm\na\nb\n", []string{"m"}, []PatternMatch{{0, 3, 2, 1}, {0, 4, 2, 2}}},
+}
+
+func TestMulipleIndex(t *testing.T) {
+	for _, test := range multipleIndexTests {
+		matches := MultipleIndex(test.text, test.needles)
+		if !slices.Equal(matches, test.result) {
+			t.Errorf("MultipleIndex(%q,%q) = %v; want %v", test.text, test.needles, matches, test.result)
+		}
+	}
+}

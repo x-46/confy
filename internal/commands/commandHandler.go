@@ -9,6 +9,7 @@ var commandList []CommandModule = []CommandModule{
 	&AddCommand{},
 	&CheckinCommand{},
 	&CheckoutCommand{},
+	&FindCommand{},
 }
 
 func GetCommandByName(name string) (CommandModule, error) {

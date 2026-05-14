@@ -29,6 +29,8 @@ type Config struct {
 
 	NewEntryValue string `cli:"entryValue" cliDescription:"Value of the new entry to add"`
 
+	ErrOnFind bool `cli:"errOnFind" cliDescription:"Terminate with exit status 1 if find finds secrets"`
+
 	SetParameters []string
 }
 
